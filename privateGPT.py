@@ -24,19 +24,61 @@ def main():
     args = parse_arguments()
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
-    retriever = db.as_retriever()
+    retriever = db.as_retriever(search_kwargs={"k": 3})
     # activate/deactivate the streaming StdOut callback for LLMs
     callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
     # Prepare the LLM
-    match model_type:
-        case "LlamaCpp":
-            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
-        case "GPT4All":
-            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
-        case _default:
-            print(f"Model {model_type} not supported!")
-            exit;
-    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
+    if model_type == "LlamaCpp":
+        llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False,n_threads=8)
+    elif model_type == "GPT4All":
+        llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
+    else:
+        print(f"Model {model_type} not supported!")
+        exit;
+
+
+
+    refine_prompt_template = (
+        "Below is an instruction that describes a task. "
+        "Write a response that appropriately completes the request.\n\n"
+        "### Instruction:\n"
+        "这是原始问题: {question}\n"
+        "已有的回答: {existing_answer}\n"
+        "现在还有一些文字，（如果有需要）你可以根据它们完善现有的回答。"
+        "\n\n"
+        "{context_str}\n"
+        "\\nn"
+        "请根据新的文段，进一步完善你的回答。\n\n"
+        "### Response: "
+    )
+
+    initial_qa_template = (
+        "Below is an instruction that describes a task. "
+        "Write a response that appropriately completes the request.\n\n"
+        "### Instruction:\n"
+        "以下为背景知识：\n"
+        "{context_str}"
+        "\n"
+        "请根据以上背景知识, 回答这个问题：{question}。\n\n"
+        "### Response: "
+    )
+
+    from langchain import PromptTemplate
+    refine_prompt = PromptTemplate(
+        input_variables=["question", "existing_answer", "context_str"],
+        template=refine_prompt_template,
+    )
+    initial_qa_prompt = PromptTemplate(
+        input_variables=["context_str", "question"],
+        template=initial_qa_template,
+    )
+    chain_type_kwargs = {"question_prompt": initial_qa_prompt, "refine_prompt": refine_prompt}
+    qa = RetrievalQA.from_chain_type(
+        llm=llm, chain_type="refine",
+        retriever=retriever, return_source_documents= not args.hide_source,
+        chain_type_kwargs=chain_type_kwargs)
+
+
     # Interactive questions and answers
     while True:
         query = input("\nEnter a query: ")
