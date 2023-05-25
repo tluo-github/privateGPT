@@ -5,3 +5,5 @@ llama-cpp-python==0.1.54
 pdfminer.six==20221105
 fastapi==0.95.2
 uvicorn[standard]==0.22.0
+asyncio=3.4.3
+sse-starlette=1.6.1
