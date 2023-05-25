@@ -3,3 +3,5 @@ gpt4all==0.2.3
 chromadb==0.3.23
 llama-cpp-python==0.1.54
 pdfminer.six==20221105
+fastapi==0.95.2
+uvicorn[standard]==0.22.0

@@ -4,7 +4,7 @@ from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
-from langchain.llms import GPT4All, LlamaCpp
+from langchain.llms import LlamaCpp
 import os
 import argparse
 
@@ -30,8 +30,6 @@ def main():
     # Prepare the LLM
     if model_type == "LlamaCpp":
         llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False,n_threads=8)
-    elif model_type == "GPT4All":
-        llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
     else:
         print(f"Model {model_type} not supported!")
         exit;
