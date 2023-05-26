@@ -29,7 +29,7 @@ def main():
     callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
     # Prepare the LLM
     if model_type == "LlamaCpp":
-        llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False,n_threads=8)
+        llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False,n_threads=8,n_gpu_layers=30)
     else:
         print(f"Model {model_type} not supported!")
         exit;
